@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { Procedure, PreparationItem } from '../types';
-import { AlertCircle, Lightbulb, CheckSquare, Plus, Trash2, HelpCircle, X, Camera } from 'lucide-react';
+import { AlertCircle, Lightbulb, CheckSquare, Plus, Trash2, X, Camera } from 'lucide-react';
 import { uploadImage } from '../firebaseUtils';
 
 interface Props {
@@ -188,17 +188,24 @@ export function PreparationList({ procedure, isEditMode, onUpdateProcedure }: Pr
                   </div>
                 ) : (
                   <>
-                    <span className="prep-item-label">{item.name}</span>
-                    {(item.description || item.imageUrl) && (
+                    <span className="prep-item-label" style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                      <span>{item.name}</span>
+                      {item.description && (
+                        <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)', fontWeight: 500, whiteSpace: 'pre-wrap' }}>
+                          {item.description}
+                        </span>
+                      )}
+                    </span>
+                    {item.imageUrl && (
                       <button 
                         onClick={(e) => {
                           e.preventDefault();
                           setSelectedItemInfo(item);
                         }}
                         style={{ background: 'none', border: 'none', color: 'var(--primary)', cursor: 'pointer', padding: '0.25rem', display: 'flex', alignItems: 'center' }}
-                        title="説明を見る"
+                        title="写真を見る"
                       >
-                        <HelpCircle size={22} />
+                        <Camera size={24} />
                       </button>
                     )}
                   </>
