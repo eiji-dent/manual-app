@@ -23,3 +23,13 @@ export type Doctor = {
   name: string;
   procedures: Procedure[];
 };
+
+export type ActivityAction = 'update_procedure' | 'update_master_image' | 'update_master_desc';
+
+export type ActivityLog = {
+  id?: string;
+  editorName: string;
+  action: ActivityAction;
+  targetName: string; // ex: "宮澤先生 - EXT", "基本セット"
+  timestamp: number;
+};

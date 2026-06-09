@@ -3,8 +3,10 @@ import { DoctorSelector } from './components/DoctorSelector';
 import { ProcedureSelector } from './components/ProcedureSelector';
 import { PreparationList } from './components/PreparationList';
 import { EditorSelector, type EditorType } from './components/EditorSelector';
-import { Settings, Activity } from 'lucide-react';
+import { ActivityLogViewer } from './components/ActivityLogViewer';
+import { Settings, Activity, History } from 'lucide-react';
 import { subscribeToDoctors, subscribeToInstruments, initializeFirestoreData } from './firebaseUtils';
+import { addLog } from './firebaseLogs';
 import type { Doctor, InstrumentMaster } from './types';
 
 function App() {
@@ -17,6 +19,13 @@ function App() {
   const [isEditMode, setIsEditMode] = useState(false);
   const [currentEditor, setCurrentEditor] = useState<EditorType>(null);
   const [guestName, setGuestName] = useState<string>('');
+  const [isLogOpen, setIsLogOpen] = useState(false);
+
+  const getEditorName = () => {
+    if (currentEditor === 'ゲスト') return guestName || 'ゲスト';
+    if (currentEditor) return currentEditor;
+    return '未選択';
+  };
 
   useEffect(() => {
     // データベースの初期化（初回のみ）
@@ -93,7 +102,15 @@ function App() {
           onSelect={handleDoctorSelect} 
         />
         
-        <div style={{ marginTop: 'auto' }}>
+        <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+          <button 
+            className="edit-mode-btn"
+            onClick={() => setIsLogOpen(true)}
+            style={{ width: '100%', justifyContent: 'center', backgroundColor: '#f1f5f9', color: '#475569', border: '1px solid #cbd5e1' }}
+          >
+            <History size={18} />
+            変更履歴を見る
+          </button>
           <button 
             className={`edit-mode-btn ${isEditMode ? 'active' : ''}`}
             onClick={() => setIsEditMode(!isEditMode)}
@@ -131,15 +148,16 @@ function App() {
             procedure={selectedProcedure} 
             instruments={instrumentsMap}
             isEditMode={isEditMode}
+            editorName={getEditorName()}
             onUpdateProcedure={async (updatedProc) => {
               if (!selectedDoctor) return;
               const newProcedures = selectedDoctor.procedures.map(p => 
                 p.id === updatedProc.id ? updatedProc : p
               );
-              // firebaseUtilsのupdateDoctorを呼び出す（まだインポートしていない場合は後で追加）
               try {
                 const { updateDoctor } = await import('./firebaseUtils');
                 await updateDoctor(selectedDoctor.id, { procedures: newProcedures });
+                await addLog(getEditorName(), 'update_procedure', `${selectedDoctor.name} - ${updatedProc.name}`);
               } catch (e) {
                 console.error("Update failed", e);
               }
@@ -151,6 +169,8 @@ function App() {
           </div>
         )}
       </main>
+
+      <ActivityLogViewer isOpen={isLogOpen} onClose={() => setIsLogOpen(false)} />
     </div>
   );
 }

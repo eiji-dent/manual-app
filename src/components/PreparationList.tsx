@@ -2,15 +2,17 @@ import { useState } from 'react';
 import type { Procedure, PreparationItem, InstrumentMaster } from '../types';
 import { AlertCircle, Lightbulb, CheckSquare, Plus, Trash2, X, Camera, Edit3 } from 'lucide-react';
 import { uploadImage, updateInstrumentMaster } from '../firebaseUtils';
+import { addLog } from '../firebaseLogs';
 
 interface Props {
   procedure: Procedure;
   instruments: Record<string, InstrumentMaster>;
   isEditMode: boolean;
+  editorName: string;
   onUpdateProcedure: (updatedProcedure: Procedure) => void;
 }
 
-export function PreparationList({ procedure, instruments, isEditMode, onUpdateProcedure }: Props) {
+export function PreparationList({ procedure, instruments, isEditMode, editorName, onUpdateProcedure }: Props) {
   const [selectedItemInfo, setSelectedItemInfo] = useState<{name: string, description?: string, imageUrl?: string} | null>(null);
   
   // 共通データ編集用モーダルの状態
@@ -70,6 +72,7 @@ export function PreparationList({ procedure, instruments, isEditMode, onUpdatePr
   const saveMasterDesc = async () => {
     if (!editingMasterItemName) return;
     await updateInstrumentMaster(editingMasterItemName, { masterDescription: masterDraftDesc });
+    await addLog(editorName, 'update_master_desc', editingMasterItemName);
     setEditingMasterItemName(null);
   };
 
@@ -81,6 +84,7 @@ export function PreparationList({ procedure, instruments, isEditMode, onUpdatePr
       const path = `preparations/${editingMasterItemName.replace(/[/]/g, '_')}_${Date.now()}.${ext}`;
       const url = await uploadImage(file, path);
       await updateInstrumentMaster(editingMasterItemName, { imageUrl: url });
+      await addLog(editorName, 'update_master_image', editingMasterItemName);
     } catch (e) {
       console.error("Image upload failed", e);
       alert("画像のアップロードに失敗しました。");
