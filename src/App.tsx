@@ -119,7 +119,23 @@ function App() {
         )}
 
         {selectedProcedure ? (
-          <PreparationList procedure={selectedProcedure} />
+          <PreparationList 
+            procedure={selectedProcedure} 
+            isEditMode={isEditMode}
+            onUpdateProcedure={async (updatedProc) => {
+              if (!selectedDoctor) return;
+              const newProcedures = selectedDoctor.procedures.map(p => 
+                p.id === updatedProc.id ? updatedProc : p
+              );
+              // firebaseUtilsのupdateDoctorを呼び出す（まだインポートしていない場合は後で追加）
+              try {
+                const { updateDoctor } = await import('./firebaseUtils');
+                await updateDoctor(selectedDoctor.id, { procedures: newProcedures });
+              } catch (e) {
+                console.error("Update failed", e);
+              }
+            }}
+          />
         ) : (
           <div className="card" style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>
             ドクターと処置を選択してください
