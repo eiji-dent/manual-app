@@ -1,9 +1,17 @@
 import { collection, doc, setDoc, getDocs, onSnapshot, updateDoc } from 'firebase/firestore';
+import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db } from './firebase';
 import { mockDoctors } from './data/mockData';
 import type { Doctor } from './types';
 
 const doctorsCol = collection(db, 'doctors');
+export const storage = getStorage(db.app);
+
+export async function uploadImage(file: File, path: string): Promise<string> {
+  const storageRef = ref(storage, path);
+  await uploadBytes(storageRef, file);
+  return await getDownloadURL(storageRef);
+}
 
 export async function initializeFirestoreData() {
   const snapshot = await getDocs(doctorsCol);
