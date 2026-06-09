@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Users, UserCircle } from 'lucide-react';
+import { useState } from 'react';
+import { Users } from 'lucide-react';
 
 export type EditorType = 'マリア' | '森重' | '岡島' | '鶴見' | '前田' | 'ドクター' | 'ゲスト' | null;
 

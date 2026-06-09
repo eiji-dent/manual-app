@@ -1,4 +1,4 @@
-import React from 'react';
+
 import type { Procedure } from '../types';
 import { Stethoscope } from 'lucide-react';
 

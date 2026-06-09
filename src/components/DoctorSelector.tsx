@@ -1,4 +1,4 @@
-import React from 'react';
+
 import type { Doctor } from '../types';
 import { User } from 'lucide-react';
 

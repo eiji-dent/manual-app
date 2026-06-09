@@ -1,4 +1,4 @@
-import React from 'react';
+
 import type { Procedure } from '../types';
 import { AlertCircle, Lightbulb, Image as ImageIcon, CheckSquare } from 'lucide-react';
 
@@ -44,7 +44,9 @@ export function PreparationList({ procedure }: Props) {
             <label key={idx} className="prep-item">
               <input type="checkbox" className="prep-item-checkbox" />
               <span className="prep-item-label">{item}</span>
-              <ImageIcon className="photo-placeholder" size={18} title="写真を表示（将来実装）" />
+              <span title="写真を表示（将来実装）" style={{ display: 'flex' }}>
+                <ImageIcon className="photo-placeholder" size={18} />
+              </span>
             </label>
           ))}
         </div>
@@ -62,7 +64,9 @@ export function PreparationList({ procedure }: Props) {
                   <label key={itemIdx} className="prep-item" style={{ backgroundColor: '#ffffff' }}>
                     <input type="checkbox" className="prep-item-checkbox" />
                     <span className="prep-item-label">{item}</span>
-                    <ImageIcon className="photo-placeholder" size={18} title="写真を表示（将来実装）" />
+                    <span title="写真を表示（将来実装）" style={{ display: 'flex' }}>
+                <ImageIcon className="photo-placeholder" size={18} />
+              </span>
                   </label>
                 ))}
               </div>
