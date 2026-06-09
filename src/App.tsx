@@ -20,11 +20,21 @@ function App() {
   const [currentEditor, setCurrentEditor] = useState<EditorType>(null);
   const [guestName, setGuestName] = useState<string>('');
   const [isLogOpen, setIsLogOpen] = useState(false);
+  const [showEditorModal, setShowEditorModal] = useState(false);
 
   const getEditorName = () => {
     if (currentEditor === 'ゲスト') return guestName || 'ゲスト';
     if (currentEditor) return currentEditor;
     return '未選択';
+  };
+
+  const handleEditModeToggle = () => {
+    if (isEditMode) {
+      setIsEditMode(false);
+      setCurrentEditor(null);
+    } else {
+      setShowEditorModal(true);
+    }
   };
 
   useEffect(() => {
@@ -88,11 +98,13 @@ function App() {
         </div>
 
         <EditorSelector 
-          currentEditor={currentEditor}
-          guestName={guestName}
+          isOpen={showEditorModal}
+          onClose={() => setShowEditorModal(false)}
           onSelectEditor={(editor, guest) => {
             setCurrentEditor(editor);
             if (guest !== undefined) setGuestName(guest);
+            setIsEditMode(true);
+            setShowEditorModal(false);
           }}
         />
 
@@ -113,11 +125,11 @@ function App() {
           </button>
           <button 
             className={`edit-mode-btn ${isEditMode ? 'active' : ''}`}
-            onClick={() => setIsEditMode(!isEditMode)}
+            onClick={handleEditModeToggle}
             style={{ width: '100%', justifyContent: 'center' }}
           >
             <Settings size={18} />
-            {isEditMode ? '編集モード終了' : 'マスター編集モード'}
+            {isEditMode ? `編集中: ${getEditorName()} (終了)` : 'マスター編集モード'}
           </button>
         </div>
       </aside>
