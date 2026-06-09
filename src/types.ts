@@ -1,7 +1,12 @@
+export type InstrumentMaster = {
+  name: string;
+  masterDescription?: string;
+  imageUrl?: string;
+};
+
 export type PreparationItem = {
   name: string;
-  description?: string;
-  imageUrl?: string;
+  description?: string; // 個別のメモ用（グレーの文字）
 };
 
 export type Procedure = {

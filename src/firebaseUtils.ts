@@ -2,15 +2,33 @@ import { collection, doc, setDoc, getDocs, onSnapshot, updateDoc } from 'firebas
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db } from './firebase';
 import { mockDoctors } from './data/mockData';
-import type { Doctor } from './types';
+import type { Doctor, InstrumentMaster } from './types';
 
 const doctorsCol = collection(db, 'doctors');
+const instrumentsCol = collection(db, 'instruments');
 export const storage = getStorage(db.app);
 
 export async function uploadImage(file: File, path: string): Promise<string> {
   const storageRef = ref(storage, path);
   await uploadBytes(storageRef, file);
   return await getDownloadURL(storageRef);
+}
+
+export function subscribeToInstruments(callback: (data: Record<string, InstrumentMaster>) => void) {
+  return onSnapshot(instrumentsCol, (snapshot) => {
+    const map: Record<string, InstrumentMaster> = {};
+    snapshot.docs.forEach(docSnap => {
+      map[docSnap.id] = { name: docSnap.id, ...docSnap.data() } as InstrumentMaster;
+    });
+    callback(map);
+  });
+}
+
+export async function updateInstrumentMaster(name: string, data: Partial<InstrumentMaster>) {
+  // nameをドキュメントIDとして使用
+  const safeId = name.replace(/\//g, '_'); // /が含まれるとパスエラーになるため安全化
+  const docRef = doc(instrumentsCol, safeId);
+  await setDoc(docRef, data, { merge: true });
 }
 
 export async function initializeFirestoreData() {

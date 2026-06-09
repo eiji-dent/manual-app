@@ -4,11 +4,12 @@ import { ProcedureSelector } from './components/ProcedureSelector';
 import { PreparationList } from './components/PreparationList';
 import { EditorSelector, type EditorType } from './components/EditorSelector';
 import { Settings, Activity } from 'lucide-react';
-import { subscribeToDoctors, initializeFirestoreData } from './firebaseUtils';
-import type { Doctor } from './types';
+import { subscribeToDoctors, subscribeToInstruments, initializeFirestoreData } from './firebaseUtils';
+import type { Doctor, InstrumentMaster } from './types';
 
 function App() {
   const [doctors, setDoctors] = useState<Doctor[]>([]);
+  const [instrumentsMap, setInstrumentsMap] = useState<Record<string, InstrumentMaster>>({});
   const [loading, setLoading] = useState(true);
 
   const [selectedDoctorId, setSelectedDoctorId] = useState<string | null>(null);
@@ -22,7 +23,7 @@ function App() {
     initializeFirestoreData();
 
     // リアルタイム同期の開始
-    const unsubscribe = subscribeToDoctors((data) => {
+    const unsubscribeDocs = subscribeToDoctors((data) => {
       setDoctors(data);
       setLoading(false);
       
@@ -35,7 +36,14 @@ function App() {
       }
     });
 
-    return () => unsubscribe();
+    const unsubscribeInsts = subscribeToInstruments((map) => {
+      setInstrumentsMap(map);
+    });
+
+    return () => {
+      unsubscribeDocs();
+      unsubscribeInsts();
+    };
   }, [selectedDoctorId]);
 
   const selectedDoctor = doctors.find(d => d.id === selectedDoctorId);
@@ -121,6 +129,7 @@ function App() {
         {selectedProcedure ? (
           <PreparationList 
             procedure={selectedProcedure} 
+            instruments={instrumentsMap}
             isEditMode={isEditMode}
             onUpdateProcedure={async (updatedProc) => {
               if (!selectedDoctor) return;

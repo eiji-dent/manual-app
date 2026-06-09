@@ -1,17 +1,22 @@
 import { useState } from 'react';
-import type { Procedure, PreparationItem } from '../types';
-import { AlertCircle, Lightbulb, CheckSquare, Plus, Trash2, X, Camera } from 'lucide-react';
-import { uploadImage } from '../firebaseUtils';
+import type { Procedure, PreparationItem, InstrumentMaster } from '../types';
+import { AlertCircle, Lightbulb, CheckSquare, Plus, Trash2, X, Camera, Edit3 } from 'lucide-react';
+import { uploadImage, updateInstrumentMaster } from '../firebaseUtils';
 
 interface Props {
   procedure: Procedure;
+  instruments: Record<string, InstrumentMaster>;
   isEditMode: boolean;
   onUpdateProcedure: (updatedProcedure: Procedure) => void;
 }
 
-export function PreparationList({ procedure, isEditMode, onUpdateProcedure }: Props) {
-  const [selectedItemInfo, setSelectedItemInfo] = useState<PreparationItem | null>(null);
-  const [uploadingIdx, setUploadingIdx] = useState<number | null>(null);
+export function PreparationList({ procedure, instruments, isEditMode, onUpdateProcedure }: Props) {
+  const [selectedItemInfo, setSelectedItemInfo] = useState<{name: string, description?: string, imageUrl?: string} | null>(null);
+  
+  // 共通データ編集用モーダルの状態
+  const [editingMasterItemName, setEditingMasterItemName] = useState<string | null>(null);
+  const [masterDraftDesc, setMasterDraftDesc] = useState('');
+  const [uploadingIdx, setUploadingIdx] = useState<boolean>(false);
 
   // Helper to normalize item type
   const normalizeItem = (item: string | PreparationItem): PreparationItem => {
@@ -56,19 +61,31 @@ export function PreparationList({ procedure, isEditMode, onUpdateProcedure }: Pr
     onUpdateProcedure({ ...procedure, items: newItems });
   };
 
-  const handleImageUpload = async (idx: number, file: File) => {
-    setUploadingIdx(idx);
+  const openMasterEditModal = (itemName: string) => {
+    const master = instruments[itemName];
+    setMasterDraftDesc(master?.masterDescription || '');
+    setEditingMasterItemName(itemName);
+  };
+
+  const saveMasterDesc = async () => {
+    if (!editingMasterItemName) return;
+    await updateInstrumentMaster(editingMasterItemName, { masterDescription: masterDraftDesc });
+    setEditingMasterItemName(null);
+  };
+
+  const handleImageUpload = async (file: File) => {
+    if (!editingMasterItemName) return;
+    setUploadingIdx(true);
     try {
       const ext = file.name.split('.').pop() || 'jpg';
-      const path = `preparations/${procedure.id}_${Date.now()}.${ext}`;
+      const path = `preparations/${editingMasterItemName.replace(/[/]/g, '_')}_${Date.now()}.${ext}`;
       const url = await uploadImage(file, path);
-      const item = normalizeItem(procedure.items[idx]);
-      handleUpdateItem(idx, { ...item, imageUrl: url });
+      await updateInstrumentMaster(editingMasterItemName, { imageUrl: url });
     } catch (e) {
       console.error("Image upload failed", e);
       alert("画像のアップロードに失敗しました。");
     } finally {
-      setUploadingIdx(null);
+      setUploadingIdx(false);
     }
   };
 
@@ -142,6 +159,8 @@ export function PreparationList({ procedure, isEditMode, onUpdateProcedure }: Pr
         <div className="prep-list" style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
           {procedure.items.map((rawItem, idx) => {
             const item = normalizeItem(rawItem);
+            const masterData = instruments[item.name];
+            
             return (
               <label key={idx} className="prep-item" style={{ cursor: isEditMode ? 'default' : 'pointer', alignItems: isEditMode ? 'flex-start' : 'center' }}>
                 {!isEditMode && <input type="checkbox" className="prep-item-checkbox" />}
@@ -159,30 +178,31 @@ export function PreparationList({ procedure, isEditMode, onUpdateProcedure }: Pr
                         <Trash2 size={20} />
                       </button>
                     </div>
-                    <textarea
-                      placeholder="器具の説明（任意）"
-                      value={item.description || ''}
-                      onChange={(e) => handleUpdateItem(idx, { ...item, description: e.target.value })}
-                      style={{ padding: '0.5rem', fontSize: '1rem', border: '1px solid var(--border-color)', borderRadius: '4px', resize: 'vertical' }}
-                    />
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                      <label style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', color: 'var(--primary)', cursor: 'pointer', fontWeight: 600 }}>
-                        <Camera size={20} />
-                        {item.imageUrl ? '写真を変更' : '写真を追加'}
-                        <input 
-                          type="file" 
-                          accept="image/*" 
-                          style={{ display: 'none' }} 
-                          onChange={(e) => {
-                            if (e.target.files && e.target.files[0]) {
-                              handleImageUpload(idx, e.target.files[0]);
-                            }
-                          }}
-                        />
-                      </label>
-                      {uploadingIdx === idx && <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>アップロード中...</span>}
-                      {item.imageUrl && (
-                        <div style={{ width: '40px', height: '40px', borderRadius: '4px', backgroundImage: `url(${item.imageUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' }} />
+                    
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                      <label style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>この処置での個別メモ（グレー文字）</label>
+                      <textarea
+                        placeholder="例：この時は3本用意する、など"
+                        value={item.description || ''}
+                        onChange={(e) => handleUpdateItem(idx, { ...item, description: e.target.value })}
+                        style={{ padding: '0.5rem', fontSize: '1rem', border: '1px solid var(--border-color)', borderRadius: '4px', resize: 'vertical' }}
+                      />
+                    </div>
+                    
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginTop: '0.25rem' }}>
+                      <button 
+                        onClick={(e) => {
+                          e.preventDefault();
+                          openMasterEditModal(item.name);
+                        }}
+                        style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 1rem', background: '#f3f4f6', border: '1px solid #d1d5db', borderRadius: '4px', cursor: 'pointer', fontWeight: 600, color: '#374151' }}
+                      >
+                        <Edit3 size={18} />
+                        写真・共通説明を編集（全体に反映）
+                      </button>
+                      
+                      {masterData?.imageUrl && (
+                        <div style={{ width: '36px', height: '36px', borderRadius: '4px', backgroundImage: `url(${masterData.imageUrl})`, backgroundSize: 'cover', backgroundPosition: 'center', border: '1px solid var(--border-color)' }} />
                       )}
                     </div>
                   </div>
@@ -196,14 +216,18 @@ export function PreparationList({ procedure, isEditMode, onUpdateProcedure }: Pr
                         </span>
                       )}
                     </span>
-                    {item.imageUrl && (
+                    {(masterData?.imageUrl || masterData?.masterDescription) && (
                       <button 
                         onClick={(e) => {
                           e.preventDefault();
-                          setSelectedItemInfo(item);
+                          setSelectedItemInfo({
+                            name: item.name,
+                            description: masterData?.masterDescription,
+                            imageUrl: masterData?.imageUrl
+                          });
                         }}
                         style={{ background: 'none', border: 'none', color: 'var(--primary)', cursor: 'pointer', padding: '0.25rem', display: 'flex', alignItems: 'center' }}
-                        title="写真を見る"
+                        title="写真・説明を見る"
                       >
                         <Camera size={24} />
                       </button>
@@ -227,7 +251,7 @@ export function PreparationList({ procedure, isEditMode, onUpdateProcedure }: Pr
         </div>
       </div>
 
-      {/* 写真・説明表示モーダル */}
+      {/* 写真・説明表示モーダル（閲覧用） */}
       {selectedItemInfo && (
         <div style={{
           position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', 
@@ -251,8 +275,80 @@ export function PreparationList({ procedure, isEditMode, onUpdateProcedure }: Pr
             {selectedItemInfo.description ? (
               <p style={{ fontSize: '1.125rem', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{selectedItemInfo.description}</p>
             ) : (
-              <p style={{ color: 'var(--text-muted)' }}>説明はありません。</p>
+              <p style={{ color: 'var(--text-muted)' }}>共通の説明はありません。</p>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* 写真・共通説明編集モーダル（マスター編集用） */}
+      {editingMasterItemName && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', 
+          backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000, padding: '1rem'
+        }} onClick={() => setEditingMasterItemName(null)}>
+          <div 
+            style={{ backgroundColor: 'white', borderRadius: 'var(--radius-lg)', padding: '1.5rem', width: '100%', maxWidth: '500px', maxHeight: '90vh', overflowY: 'auto' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+              <h3 style={{ fontSize: '1.25rem', fontWeight: 700 }}>{editingMasterItemName} の共通データ</h3>
+              <button onClick={() => setEditingMasterItemName(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}>
+                <X size={24} />
+              </button>
+            </div>
+            
+            <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)', marginBottom: '1.5rem' }}>
+              ※ここで設定した写真と説明は、全ての処置リストの同じ名前の器具に自動で反映されます。
+            </p>
+
+            {/* 写真 */}
+            <div style={{ marginBottom: '1.5rem' }}>
+              <label style={{ display: 'block', fontWeight: 600, marginBottom: '0.5rem' }}>共通写真</label>
+              {instruments[editingMasterItemName]?.imageUrl ? (
+                <div style={{ marginBottom: '1rem' }}>
+                  <img src={instruments[editingMasterItemName].imageUrl} alt="current" style={{ width: '100%', borderRadius: 'var(--radius-md)', objectFit: 'contain', maxHeight: '200px' }} />
+                </div>
+              ) : (
+                <div style={{ height: '100px', background: '#f3f4f6', borderRadius: 'var(--radius-md)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1rem', color: '#9ca3af' }}>写真未登録</div>
+              )}
+              
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                <label style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 1rem', background: 'var(--primary)', color: 'white', borderRadius: '4px', cursor: 'pointer', fontWeight: 600 }}>
+                  <Camera size={20} />
+                  {instruments[editingMasterItemName]?.imageUrl ? '写真を変更する' : '写真を撮影／アップロード'}
+                  <input 
+                    type="file" 
+                    accept="image/*" 
+                    style={{ display: 'none' }} 
+                    onChange={(e) => {
+                      if (e.target.files && e.target.files[0]) {
+                        handleImageUpload(e.target.files[0]);
+                      }
+                    }}
+                  />
+                </label>
+                {uploadingIdx && <span style={{ fontSize: '0.9rem', color: 'var(--primary)' }}>送信中...</span>}
+              </div>
+            </div>
+
+            {/* 説明 */}
+            <div style={{ marginBottom: '1.5rem' }}>
+              <label style={{ display: 'block', fontWeight: 600, marginBottom: '0.5rem' }}>ポップアップ用の共通説明</label>
+              <textarea
+                value={masterDraftDesc}
+                onChange={(e) => setMasterDraftDesc(e.target.value)}
+                placeholder="例：この器具は滅菌パックに入れること、など"
+                style={{ width: '100%', padding: '0.75rem', fontSize: '1rem', border: '1px solid var(--border-color)', borderRadius: '4px', minHeight: '100px', resize: 'vertical' }}
+              />
+            </div>
+
+            <button 
+              onClick={saveMasterDesc}
+              style={{ width: '100%', padding: '0.75rem', background: 'var(--primary)', color: 'white', fontWeight: 700, borderRadius: 'var(--radius-md)', border: 'none', cursor: 'pointer' }}
+            >
+              説明文を保存して閉じる
+            </button>
           </div>
         </div>
       )}
