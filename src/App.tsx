@@ -1,25 +1,50 @@
-import React, { useState } from 'react';
-import { mockDoctors } from './data/mockData';
+import { useState, useEffect } from 'react';
 import { DoctorSelector } from './components/DoctorSelector';
 import { ProcedureSelector } from './components/ProcedureSelector';
 import { PreparationList } from './components/PreparationList';
 import { EditorSelector, type EditorType } from './components/EditorSelector';
 import { Settings, Activity } from 'lucide-react';
+import { subscribeToDoctors, initializeFirestoreData } from './firebaseUtils';
+import type { Doctor } from './types';
 
 function App() {
-  const [selectedDoctorId, setSelectedDoctorId] = useState<string | null>(mockDoctors[0]?.id || null);
+  const [doctors, setDoctors] = useState<Doctor[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const [selectedDoctorId, setSelectedDoctorId] = useState<string | null>(null);
   const [selectedProcedureId, setSelectedProcedureId] = useState<string | null>(null);
   const [isEditMode, setIsEditMode] = useState(false);
   const [currentEditor, setCurrentEditor] = useState<EditorType>(null);
   const [guestName, setGuestName] = useState<string>('');
 
-  const selectedDoctor = mockDoctors.find(d => d.id === selectedDoctorId);
+  useEffect(() => {
+    // データベースの初期化（初回のみ）
+    initializeFirestoreData();
+
+    // リアルタイム同期の開始
+    const unsubscribe = subscribeToDoctors((data) => {
+      setDoctors(data);
+      setLoading(false);
+      
+      // データ取得後に未選択なら最初のドクターを選択
+      if (data.length > 0 && !selectedDoctorId) {
+        setSelectedDoctorId(data[0].id);
+        if (data[0].procedures.length > 0) {
+          setSelectedProcedureId(data[0].procedures[0].id);
+        }
+      }
+    });
+
+    return () => unsubscribe();
+  }, [selectedDoctorId]);
+
+  const selectedDoctor = doctors.find(d => d.id === selectedDoctorId);
   const selectedProcedure = selectedDoctor?.procedures.find(p => p.id === selectedProcedureId);
 
   // ドクターが変わったら処置の選択をリセットするか、最初の処置を選ぶ
   const handleDoctorSelect = (id: string) => {
     setSelectedDoctorId(id);
-    const doctor = mockDoctors.find(d => d.id === id);
+    const doctor = doctors.find(d => d.id === id);
     if (doctor && doctor.procedures.length > 0) {
       setSelectedProcedureId(doctor.procedures[0].id);
     } else {
@@ -27,12 +52,13 @@ function App() {
     }
   };
 
-  // 初期ロード時に最初のドクターの最初の処置を選択しておく
-  React.useEffect(() => {
-    if (selectedDoctor && !selectedProcedureId && selectedDoctor.procedures.length > 0) {
-      setSelectedProcedureId(selectedDoctor.procedures[0].id);
-    }
-  }, [selectedDoctor, selectedProcedureId]);
+  if (loading) {
+    return (
+      <div className="app-container" style={{ justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        <div style={{ fontSize: '1.25rem', color: 'var(--text-muted)' }}>読み込み中...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="app-container">
@@ -54,7 +80,7 @@ function App() {
         />
 
         <DoctorSelector 
-          doctors={mockDoctors} 
+          doctors={doctors} 
           selectedId={selectedDoctorId} 
           onSelect={handleDoctorSelect} 
         />
@@ -78,7 +104,7 @@ function App() {
             <div>
               <div className="alert-title">マスター編集モード中</div>
               <div className="alert-content">
-                現在表示されている準備物や特記事項をクリックして直接編集できるようになります。（モックアップのため表示のみ）
+                ※ 現在は「表示」と「Firebaseのリアルタイム同期」までの実装となっています。実際の編集・保存機能は実装準備中です！
               </div>
             </div>
           </div>
