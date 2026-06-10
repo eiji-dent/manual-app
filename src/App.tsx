@@ -165,13 +165,42 @@ function App() {
         ) : (
           <>
             {isEditMode && (
-              <div className="alert-box alert-warning" style={{ backgroundColor: '#fee2e2', borderColor: '#fca5a5', color: '#991b1b' }}>
-                <Settings size={24} className="alert-icon" />
-                <div>
-                  <div className="alert-title">マスター編集モード中</div>
-                  <div className="alert-content">
-                    ※ 現在は「表示」と「Firebaseのリアルタイム同期」までの実装となっています。実際の編集・保存機能は実装準備中です！
+              <div className="alert-box alert-warning" style={{ backgroundColor: '#fee2e2', borderColor: '#fca5a5', color: '#991b1b', marginBottom: '1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                  <Settings size={24} className="alert-icon" />
+                  <div>
+                    <div className="alert-title">マスター編集モード中</div>
+                    <div className="alert-content">
+                      ※ 現在は「表示」と「Firebaseのリアルタイム同期」までの実装となっています。実際の編集・保存機能は実装準備中です！
+                    </div>
                   </div>
+                </div>
+                <div style={{ marginTop: '0.5rem', display: 'flex', justifyContent: 'flex-end' }}>
+                  <button 
+                    onClick={async () => {
+                      if (!window.confirm('過去に各処置で入力された「文字だけの器具データ」を、すべて共通マスターに登録しますか？')) return;
+                      try {
+                        const { updateInstrumentMaster } = await import('./firebaseUtils');
+                        for (const doc of doctors) {
+                          for (const proc of doc.procedures) {
+                            for (const item of proc.items) {
+                              const itemName = typeof item === 'string' ? item : item.name;
+                              if (!instrumentsMap[itemName]) {
+                                await updateInstrumentMaster(itemName, { name: itemName });
+                              }
+                            }
+                          }
+                        }
+                        alert('マスターへの一括同期が完了しました！');
+                      } catch (e) {
+                        console.error(e);
+                        alert('エラーが発生しました。');
+                      }
+                    }}
+                    style={{ padding: '0.5rem 1rem', backgroundColor: '#dc2626', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 600, fontSize: '0.85rem' }}
+                  >
+                    🚀 文字だけの器具をマスターに一括同期する
+                  </button>
                 </div>
               </div>
             )}
@@ -181,6 +210,19 @@ function App() {
                 procedures={selectedDoctor.procedures} 
                 selectedId={selectedProcedureId}
                 onSelect={setSelectedProcedureId}
+                isEditMode={isEditMode}
+                onAddProcedure={async (name) => {
+                  const newId = `proc-${Date.now()}`;
+                  const newProcedures = [...selectedDoctor.procedures, { id: newId, name, items: [] }];
+                  try {
+                    const { updateDoctor } = await import('./firebaseUtils');
+                    await updateDoctor(selectedDoctor.id, { procedures: newProcedures });
+                    setSelectedProcedureId(newId);
+                    await addLog(getEditorName(), 'update_procedure', `${selectedDoctor.name}に「${name}」を追加`);
+                  } catch (e) {
+                    console.error("Add procedure failed", e);
+                  }
+                }}
               />
             )}
 
