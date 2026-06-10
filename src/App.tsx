@@ -181,20 +181,26 @@ function App() {
                       if (!window.confirm('過去に各処置で入力された「文字だけの器具データ」を、すべて共通マスターに登録しますか？')) return;
                       try {
                         const { updateInstrumentMaster } = await import('./firebaseUtils');
-                        for (const doc of doctors) {
-                          for (const proc of doc.procedures) {
+                        for (const doctor of doctors) {
+                          if (!doctor.procedures) continue;
+                          for (const proc of doctor.procedures) {
+                            if (!proc.items) continue;
                             for (const item of proc.items) {
+                              if (!item) continue;
                               const itemName = typeof item === 'string' ? item : item.name;
-                              if (!instrumentsMap[itemName]) {
-                                await updateInstrumentMaster(itemName, { name: itemName });
+                              if (!itemName || !itemName.trim()) continue;
+                              
+                              const cleanName = itemName.trim();
+                              if (!instrumentsMap[cleanName]) {
+                                await updateInstrumentMaster(cleanName, { name: cleanName });
                               }
                             }
                           }
                         }
                         alert('マスターへの一括同期が完了しました！');
-                      } catch (e) {
-                        console.error(e);
-                        alert('エラーが発生しました。');
+                      } catch (e: any) {
+                        console.error("Migration error:", e);
+                        alert(`エラーが発生しました: ${e.message || '不明なエラー'}`);
                       }
                     }}
                     style={{ padding: '0.5rem 1rem', backgroundColor: '#dc2626', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 600, fontSize: '0.85rem' }}
