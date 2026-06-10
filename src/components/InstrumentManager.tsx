@@ -86,7 +86,7 @@ export function InstrumentManager({ instruments, editorName }: Props) {
       <div className="card">
         <h2 className="section-title">
           <Package size={24} />
-          器具・材料マスター
+          器具・材料一覧
         </h2>
         
         <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>

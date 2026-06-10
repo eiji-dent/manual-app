@@ -114,7 +114,7 @@ function App() {
             style={{ width: '100%', justifyContent: 'flex-start', padding: '0.75rem 1rem', display: 'flex', alignItems: 'center', gap: '0.75rem', borderRadius: 'var(--radius-md)', border: 'none', backgroundColor: currentView === 'master' ? 'var(--primary)' : 'transparent', color: currentView === 'master' ? 'white' : 'var(--text-main)', cursor: 'pointer', fontWeight: 600 }}
           >
             <Package size={20} />
-            器具・材料マスター
+            器具・材料一覧
           </button>
         </div>
 
