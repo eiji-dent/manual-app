@@ -1,4 +1,4 @@
-import { collection, doc, setDoc, getDocs, onSnapshot, updateDoc } from 'firebase/firestore';
+import { collection, doc, setDoc, getDocs, onSnapshot, updateDoc, deleteDoc } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db } from './firebase';
 import { mockDoctors } from './data/mockData';
@@ -29,6 +29,12 @@ export async function updateInstrumentMaster(name: string, data: Partial<Instrum
   const safeId = name.replace(/\//g, '_'); // /が含まれるとパスエラーになるため安全化
   const docRef = doc(instrumentsCol, safeId);
   await setDoc(docRef, data, { merge: true });
+}
+
+export async function deleteInstrumentMaster(name: string) {
+  const safeId = name.replace(/\//g, '_');
+  const docRef = doc(instrumentsCol, safeId);
+  await deleteDoc(docRef);
 }
 
 export async function initializeFirestoreData() {

@@ -2,9 +2,10 @@ import { useState, useEffect } from 'react';
 import { DoctorSelector } from './components/DoctorSelector';
 import { ProcedureSelector } from './components/ProcedureSelector';
 import { PreparationList } from './components/PreparationList';
+import { InstrumentManager } from './components/InstrumentManager';
 import { EditorSelector, type EditorType } from './components/EditorSelector';
 import { ActivityLogViewer } from './components/ActivityLogViewer';
-import { Settings, Activity, History } from 'lucide-react';
+import { Settings, Activity, History, Package, ClipboardList } from 'lucide-react';
 import { subscribeToDoctors, subscribeToInstruments, initializeFirestoreData } from './firebaseUtils';
 import { addLog } from './firebaseLogs';
 import type { Doctor, InstrumentMaster } from './types';
@@ -21,6 +22,7 @@ function App() {
   const [guestName, setGuestName] = useState<string>('');
   const [isLogOpen, setIsLogOpen] = useState(false);
   const [showEditorModal, setShowEditorModal] = useState(false);
+  const [currentView, setCurrentView] = useState<'procedures' | 'master'>('procedures');
 
   const getEditorName = () => {
     if (currentEditor === 'ゲスト') return guestName || 'ゲスト';
@@ -90,12 +92,39 @@ function App() {
   return (
     <div className="app-container">
       <aside className="sidebar">
-        <div className="app-header">
+        <div className="app-header" style={{ marginBottom: '1rem' }}>
           <h1 className="app-title">
             <Activity size={28} />
             DentalPrep
           </h1>
         </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '1.5rem' }}>
+          <button 
+            className={`procedure-tab ${currentView === 'procedures' ? 'active' : ''}`}
+            onClick={() => setCurrentView('procedures')}
+            style={{ width: '100%', justifyContent: 'flex-start', padding: '0.75rem 1rem', display: 'flex', alignItems: 'center', gap: '0.75rem', borderRadius: 'var(--radius-md)', border: 'none', backgroundColor: currentView === 'procedures' ? 'var(--primary)' : 'transparent', color: currentView === 'procedures' ? 'white' : 'var(--text-main)', cursor: 'pointer', fontWeight: 600 }}
+          >
+            <ClipboardList size={20} />
+            処置マニュアル
+          </button>
+          <button 
+            className={`procedure-tab ${currentView === 'master' ? 'active' : ''}`}
+            onClick={() => setCurrentView('master')}
+            style={{ width: '100%', justifyContent: 'flex-start', padding: '0.75rem 1rem', display: 'flex', alignItems: 'center', gap: '0.75rem', borderRadius: 'var(--radius-md)', border: 'none', backgroundColor: currentView === 'master' ? 'var(--primary)' : 'transparent', color: currentView === 'master' ? 'white' : 'var(--text-main)', cursor: 'pointer', fontWeight: 600 }}
+          >
+            <Package size={20} />
+            器具・材料マスター
+          </button>
+        </div>
+
+        {currentView === 'procedures' && (
+          <DoctorSelector 
+            doctors={doctors} 
+            selectedId={selectedDoctorId} 
+            onSelect={handleDoctorSelect} 
+          />
+        )}
 
         <EditorSelector 
           isOpen={showEditorModal}
@@ -107,13 +136,6 @@ function App() {
             setShowEditorModal(false);
           }}
         />
-
-        <DoctorSelector 
-          doctors={doctors} 
-          selectedId={selectedDoctorId} 
-          onSelect={handleDoctorSelect} 
-        />
-        
         <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
           <button 
             className="edit-mode-btn"
@@ -135,50 +157,59 @@ function App() {
       </aside>
 
       <main className="main-content">
-        {isEditMode && (
-          <div className="alert-box alert-warning" style={{ backgroundColor: '#fee2e2', borderColor: '#fca5a5', color: '#991b1b' }}>
-            <Settings size={24} className="alert-icon" />
-            <div>
-              <div className="alert-title">マスター編集モード中</div>
-              <div className="alert-content">
-                ※ 現在は「表示」と「Firebaseのリアルタイム同期」までの実装となっています。実際の編集・保存機能は実装準備中です！
-              </div>
-            </div>
-          </div>
-        )}
-
-        {selectedDoctor && (
-          <ProcedureSelector 
-            procedures={selectedDoctor.procedures} 
-            selectedId={selectedProcedureId}
-            onSelect={setSelectedProcedureId}
-          />
-        )}
-
-        {selectedProcedure ? (
-          <PreparationList 
-            procedure={selectedProcedure} 
+        {currentView === 'master' ? (
+          <InstrumentManager 
             instruments={instrumentsMap}
-            isEditMode={isEditMode}
             editorName={getEditorName()}
-            onUpdateProcedure={async (updatedProc) => {
-              if (!selectedDoctor) return;
-              const newProcedures = selectedDoctor.procedures.map(p => 
-                p.id === updatedProc.id ? updatedProc : p
-              );
-              try {
-                const { updateDoctor } = await import('./firebaseUtils');
-                await updateDoctor(selectedDoctor.id, { procedures: newProcedures });
-                await addLog(getEditorName(), 'update_procedure', `${selectedDoctor.name} - ${updatedProc.name}`);
-              } catch (e) {
-                console.error("Update failed", e);
-              }
-            }}
           />
         ) : (
-          <div className="card" style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>
-            ドクターと処置を選択してください
-          </div>
+          <>
+            {isEditMode && (
+              <div className="alert-box alert-warning" style={{ backgroundColor: '#fee2e2', borderColor: '#fca5a5', color: '#991b1b' }}>
+                <Settings size={24} className="alert-icon" />
+                <div>
+                  <div className="alert-title">マスター編集モード中</div>
+                  <div className="alert-content">
+                    ※ 現在は「表示」と「Firebaseのリアルタイム同期」までの実装となっています。実際の編集・保存機能は実装準備中です！
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {selectedDoctor && (
+              <ProcedureSelector 
+                procedures={selectedDoctor.procedures} 
+                selectedId={selectedProcedureId}
+                onSelect={setSelectedProcedureId}
+              />
+            )}
+
+            {selectedProcedure ? (
+              <PreparationList 
+                procedure={selectedProcedure} 
+                instruments={instrumentsMap}
+                isEditMode={isEditMode}
+                editorName={getEditorName()}
+                onUpdateProcedure={async (updatedProc) => {
+                  if (!selectedDoctor) return;
+                  const newProcedures = selectedDoctor.procedures.map(p => 
+                    p.id === updatedProc.id ? updatedProc : p
+                  );
+                  try {
+                    const { updateDoctor } = await import('./firebaseUtils');
+                    await updateDoctor(selectedDoctor.id, { procedures: newProcedures });
+                    await addLog(getEditorName(), 'update_procedure', `${selectedDoctor.name} - ${updatedProc.name}`);
+                  } catch (e) {
+                    console.error("Update failed", e);
+                  }
+                }}
+              />
+            ) : (
+              <div className="card" style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>
+                ドクターと処置を選択してください
+              </div>
+            )}
+          </>
         )}
       </main>
 

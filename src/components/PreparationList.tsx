@@ -3,6 +3,7 @@ import type { Procedure, PreparationItem, InstrumentMaster } from '../types';
 import { AlertCircle, Lightbulb, CheckSquare, Plus, Trash2, X, Camera, Edit3 } from 'lucide-react';
 import { uploadImage, updateInstrumentMaster } from '../firebaseUtils';
 import { addLog } from '../firebaseLogs';
+import { InstrumentSelectorModal } from './InstrumentSelectorModal';
 
 interface Props {
   procedure: Procedure;
@@ -52,9 +53,12 @@ export function PreparationList({ procedure, instruments, isEditMode, editorName
     onUpdateProcedure({ ...procedure, items: newItems });
   };
 
-  const handleAddItem = () => {
-    const newItems = [...procedure.items, { name: '新しい準備物' }];
+  const [isSelectorOpen, setIsSelectorOpen] = useState(false);
+
+  const handleAddItem = (name: string) => {
+    const newItems = [...procedure.items, { name }];
     onUpdateProcedure({ ...procedure, items: newItems });
+    setIsSelectorOpen(false);
   };
 
   const handleRemoveItem = (idx: number) => {
@@ -244,7 +248,7 @@ export function PreparationList({ procedure, instruments, isEditMode, editorName
           
           {isEditMode && (
             <button 
-              onClick={handleAddItem} 
+              onClick={() => setIsSelectorOpen(true)} 
               className="prep-item" 
               style={{ justifyContent: 'center', alignItems: 'center', backgroundColor: 'transparent', borderStyle: 'dashed', color: 'var(--primary)', fontWeight: 600, cursor: 'pointer', padding: '1rem' }}
             >
@@ -254,6 +258,13 @@ export function PreparationList({ procedure, instruments, isEditMode, editorName
           )}
         </div>
       </div>
+
+      <InstrumentSelectorModal 
+        isOpen={isSelectorOpen}
+        onClose={() => setIsSelectorOpen(false)}
+        instruments={instruments}
+        onSelect={handleAddItem}
+      />
 
       {/* 写真・説明表示モーダル（閲覧用） */}
       {selectedItemInfo && (
