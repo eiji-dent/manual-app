@@ -175,7 +175,58 @@ function App() {
                     </div>
                   </div>
                 </div>
-                <div style={{ marginTop: '0.5rem', display: 'flex', justifyContent: 'flex-end' }}>
+                <div style={{ marginTop: '0.5rem', display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
+                  <button 
+                    onClick={async () => {
+                      if (!window.confirm('Wordマニュアルのアシスト手順を、関連する処置に一括反映しますか？（※既存の手順は上書きされます）')) return;
+                      try {
+                        const { manualStepsData } = await import('./data/manualData');
+                        const { updateDoctor } = await import('./firebaseUtils');
+                        
+                        let updatedCount = 0;
+                        for (const doctor of doctors) {
+                          if (!doctor.procedures) continue;
+                          let changed = false;
+                          const newProcedures = doctor.procedures.map(proc => {
+                            let stepsToApply = null;
+                            const procName = proc.name.toLowerCase();
+                            
+                            if (procName.includes('mta')) {
+                              stepsToApply = procName.includes('パテ') ? manualStepsData['パテタイプのMTA'] : manualStepsData['MTA'];
+                            } else if (procName.includes('rcf') || procName.includes('根充')) {
+                              stepsToApply = manualStepsData['RCF'];
+                            } else if (procName.includes('コア') || procName.includes('土台')) {
+                              if (procName.includes('除去')) {
+                                stepsToApply = manualStepsData['Zr・レジンコア除去'];
+                              } else {
+                                stepsToApply = manualStepsData['コア築'];
+                              }
+                            } else if (procName.includes('tek') || procName.includes('テック')) {
+                              stepsToApply = manualStepsData['TEK調整'];
+                            }
+                            
+                            if (stepsToApply) {
+                              changed = true;
+                              updatedCount++;
+                              return { ...proc, assistantSteps: stepsToApply };
+                            }
+                            return proc;
+                          });
+                          
+                          if (changed) {
+                            await updateDoctor(doctor.id, { procedures: newProcedures });
+                          }
+                        }
+                        alert(`マニュアルデータの反映が完了しました！（${updatedCount}件の処置を更新）`);
+                      } catch (e: any) {
+                        console.error("Migration error:", e);
+                        alert(`エラーが発生しました: ${e.message || '不明なエラー'}`);
+                      }
+                    }}
+                    style={{ padding: '0.5rem 1rem', backgroundColor: '#0284c7', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 600, fontSize: '0.85rem' }}
+                  >
+                    📖 Wordマニュアルの手順を一括反映する
+                  </button>
                   <button 
                     onClick={async () => {
                       if (!window.confirm('過去に各処置で入力された「文字だけの器具データ」を、すべて共通マスターに登録しますか？')) return;

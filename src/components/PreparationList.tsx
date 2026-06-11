@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import type { Procedure, PreparationItem, InstrumentMaster } from '../types';
-import { AlertCircle, Lightbulb, CheckSquare, Plus, Trash2, X, Camera, Edit3 } from 'lucide-react';
+import { AlertCircle, Lightbulb, CheckSquare, Plus, Trash2, X, Camera, Edit3, ListOrdered } from 'lucide-react';
 import { uploadImage, updateInstrumentMaster } from '../firebaseUtils';
 import { addLog } from '../firebaseLogs';
 import { InstrumentSelectorModal } from './InstrumentSelectorModal';
+import { ProcedureSteps } from './ProcedureSteps';
 
 interface Props {
   procedure: Procedure;
@@ -14,6 +15,7 @@ interface Props {
 }
 
 export function PreparationList({ procedure, instruments, isEditMode, editorName, onUpdateProcedure }: Props) {
+  const [activeTab, setActiveTab] = useState<'prep' | 'steps'>('prep');
   const [selectedItemInfo, setSelectedItemInfo] = useState<{name: string, description?: string, imageUrl?: string} | null>(null);
   
   // 共通データ編集用モーダルの状態
@@ -100,7 +102,36 @@ export function PreparationList({ procedure, instruments, isEditMode, editorName
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
       
-      {/* 都度確認事項 */}
+      {/* タブ切り替え */}
+      <div style={{ display: 'flex', borderBottom: '2px solid var(--border)', marginBottom: '0.5rem' }}>
+        <button
+          onClick={() => setActiveTab('prep')}
+          style={{
+            flex: 1, padding: '1rem', background: 'none', border: 'none', fontSize: '1.1rem', fontWeight: 600,
+            borderBottom: activeTab === 'prep' ? '3px solid var(--primary)' : '3px solid transparent',
+            color: activeTab === 'prep' ? 'var(--primary)' : 'var(--text-muted)',
+            cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem'
+          }}
+        >
+          <CheckSquare size={20} />
+          準備物リスト
+        </button>
+        <button
+          onClick={() => setActiveTab('steps')}
+          style={{
+            flex: 1, padding: '1rem', background: 'none', border: 'none', fontSize: '1.1rem', fontWeight: 600,
+            borderBottom: activeTab === 'steps' ? '3px solid var(--primary)' : '3px solid transparent',
+            color: activeTab === 'steps' ? 'var(--primary)' : 'var(--text-muted)',
+            cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem'
+          }}
+        >
+          <ListOrdered size={20} />
+          アシスト手順
+        </button>
+      </div>
+
+      <div style={{ display: activeTab === 'prep' ? 'flex' : 'none', flexDirection: 'column', gap: '1.5rem' }}>
+        {/* 都度確認事項 */}
       {(procedure.checkItems && procedure.checkItems.length > 0 || isEditMode) && (
         <div className="alert-box alert-warning">
           <AlertCircle className="alert-icon" size={24} />
@@ -257,6 +288,16 @@ export function PreparationList({ procedure, instruments, isEditMode, editorName
             </button>
           )}
         </div>
+      </div>
+      </div>
+
+      <div style={{ display: activeTab === 'steps' ? 'block' : 'none' }}>
+        <ProcedureSteps 
+          procedure={procedure} 
+          isEditMode={isEditMode} 
+          editorName={editorName} 
+          onUpdateProcedure={onUpdateProcedure} 
+        />
       </div>
 
       <InstrumentSelectorModal 

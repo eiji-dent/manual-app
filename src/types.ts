@@ -9,12 +9,21 @@ export type PreparationItem = {
   description?: string; // 個別のメモ用（グレーの文字）
 };
 
+export type AssistantStep = {
+  id: string;
+  stepNumber: number;
+  description: string;
+  imageUrl?: string;
+  note?: string;
+};
+
 export type Procedure = {
   id: string;
   name: string;
   items: (string | PreparationItem)[]; // 移行期間のため string も許容
   conditionalItems?: { condition: string; items: (string | PreparationItem)[] }[];
   checkItems?: string[];
+  assistantSteps?: AssistantStep[];
   notes?: string;
 };
 
