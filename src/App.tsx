@@ -258,6 +258,77 @@ function App() {
                   >
                     🚀 文字だけの器具をマスターに一括同期する
                   </button>
+                  <button 
+                    onClick={async () => {
+                      if (!window.confirm('院長（宮澤先生）の処置リストに、マニュアル記載の処置（RCF, MTA, コア築など）と準備物を追加しますか？')) return;
+                      try {
+                        const { manualStepsData } = await import('./data/manualData');
+                        const { updateDoctor } = await import('./firebaseUtils');
+                        
+                        const miyazawa = doctors.find(d => d.id === 'miyazawa');
+                        if (!miyazawa) {
+                          alert('宮澤先生が見つかりません。');
+                          return;
+                        }
+
+                        const newProcedures = [
+                          {
+                            id: `miyazawa-rcf-${Date.now()}`,
+                            name: 'RCF工程',
+                            items: ['滅菌精製水シリンジ(10ml)', 'クロルヘキシジンシリンジ(5ml)', 'イリセーフ、Varios(P2)', 'RCFキット', 'GP', 'ウェルパルプST', 'ウェルパルプSTの先端', 'レンツロ、TC２', 'アルファ', 'ゼネシス', '3way先端（細）', '超音波チップ、ニュートロン'],
+                            assistantSteps: manualStepsData['RCF']
+                          },
+                          {
+                            id: `miyazawa-mta-${Date.now()}`,
+                            name: 'MTA',
+                            items: ['プラガー', 'スパチュラ', 'ガラス練板', 'キャリア', 'MTAセメント', '滅菌精製水'],
+                            assistantSteps: manualStepsData['MTA']
+                          },
+                          {
+                            id: `miyazawa-pmta-${Date.now()}`,
+                            name: 'パテタイプのMTA',
+                            items: ['プラガー', 'スパチュラ', 'ガラス練板', 'キャリア', 'WellPlup PT'],
+                            assistantSteps: manualStepsData['パテタイプのMTA']
+                          },
+                          {
+                            id: `miyazawa-core-${Date.now()}`,
+                            name: 'コア築造',
+                            items: ['3way先端（細）', 'サンドブラスト', 'サンドブラスト用のミラー', '患者用の目元タオル', 'コア築セット、ダッペンディッシュ', 'EDTA(5ml)', '滅菌精製水(10ml)', 'マイクロアプリケーター(黒)3本', '照射機', 'ファイバーポスト', '根充用ピンセット', 'タービン、バーセット'],
+                            assistantSteps: manualStepsData['コア築']
+                          },
+                          {
+                            id: `miyazawa-zr-${Date.now()}`,
+                            name: 'Zr・レジンコア除去',
+                            items: ['表面麻酔、麻酔', 'タービン', 'TR-19', 'クラウンスプレッダー', 'リムーバー', '除去バー', 'BR-31', 'ニュートロン(E7D)', 'バーセット', 'コントラ'],
+                            assistantSteps: manualStepsData['Zr・レジンコア除去']
+                          },
+                          {
+                            id: `miyazawa-tek-${Date.now()}`,
+                            name: 'エンド後のTEK調整',
+                            items: ['ストレート', 'ストレートのバー', '即重', '咬合紙の赤・青', 'テンポラリーセメントのハード', 'ロールワッテ'],
+                            assistantSteps: manualStepsData['TEK調整']
+                          }
+                        ];
+
+                        // 既存の処置とマージ（同名のものがあれば追加しないなどの考慮もできるが、今回はシンプルに追加）
+                        const mergedProcedures = [...miyazawa.procedures];
+                        for (const newProc of newProcedures) {
+                          if (!mergedProcedures.find(p => p.name === newProc.name)) {
+                            mergedProcedures.push(newProc);
+                          }
+                        }
+
+                        await updateDoctor('miyazawa', { procedures: mergedProcedures });
+                        alert('院長のメニューに新しい処置を追加しました！');
+                      } catch (e: any) {
+                        console.error("Migration error:", e);
+                        alert(`エラーが発生しました: ${e.message || '不明なエラー'}`);
+                      }
+                    }}
+                    style={{ padding: '0.5rem 1rem', backgroundColor: '#10b981', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 600, fontSize: '0.85rem' }}
+                  >
+                    👨‍⚕️ 院長の処置メニュー（RCF等）を追加する
+                  </button>
                 </div>
               </div>
             )}
